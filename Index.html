@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Life Simulator - Extended Edition</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8f9fa;
+      color: #333;
+      overflow: hidden;
+    }
+    #game-container {
+      display: flex;
+      height: 100vh;
+    }
+    #left-panel {
+      width: 360px;
+      background: #fff;
+      border-right: 2px solid #ccc;
+      padding: 15px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    #header {
+      font-size: 1.8em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #status-panel p {
+      margin: 4px 0;
+    }
+    #game-log {
+      height: 40vh;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background: #e9ecef;
+      margin-bottom: 15px;
+      font-size: 0.95em;
+    }
+    #control-panel {
+      text-align: center;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #right-panel {
+      flex: 1;
+      position: relative;
+      background: #dee2e6;
+    }
+    #life-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Left panel: Status, game log, and controls -->
+    <div id="left-panel">
+      <div id="header">Life Simulator</div>
+      <div id="status-panel">
+        <p><strong>Name:</strong> <span id="playerName">-</span></p>
+        <p><strong>Age:</strong> <span id="playerAge">0</span></p>
+        <p><strong>Health:</strong> <span id="playerHealth">100</span></p>
+        <p><strong>Happiness:</strong> <span id="playerHappiness">50</span></p>
+        <p><strong>Wealth:</strong> $<span id="playerWealth">0</span></p>
+        <p><strong>Education:</strong> <span id="playerEducation">None</span></p>
+        <p><strong>Career:</strong> <span id="playerCareer">None</span></p>
+        <p><strong>Intelligence:</strong> <span id="playerIntelligence">0</span></p>
+        <p><strong>Social:</strong> <span id="playerSocial">0</span></p>
+        <p><strong>Creativity:</strong> <span id="playerCreativity">0</span></p>
+        <p><strong>Married:</strong> <span id="playerMarried">No</span></p>
+        <p><strong>Children:</strong> <span id="playerChildren">0</span></p>
+      </div>
+      <div id="game-log">
+        <p>Welcome to your life! Click "New Game" to start your journey.</p>
+      </div>
+      <div id="control-panel">
+        <button id="newGameBtn">New Game</button>
+        <button id="nextYearBtn" style="display:none;">Next Year</button>
+      </div>
+    </div>
+    <!-- Right panel: Canvas timeline -->
+    <div id="right-panel">
+      <canvas id="life-canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // Player object with extended attributes
+    let player = {
+      name: "",
+      age: 0,
+      health: 100,
+      happiness: 50,
+      wealth: 0,
+      education: "None",
+      career: "None",
+      intelligence: 0,
+      social: 0,
+      creativity: 0,
+      married: false,
+      children: 0,
+      history: []  // to track life events
+    };
+
+    let gameOver = false;
+    let pendingChoice = null;
+
+    // DOM Elements
+    const playerNameEl = document.getElementById("playerName");
+    const playerAgeEl = document.getElementById("playerAge");
+    const playerHealthEl = document.getElementById("playerHealth");
+    const playerHappinessEl = document.getElementById("playerHappiness");
+    const playerWealthEl = document.getElementById("playerWealth");
+    const playerEducationEl = document.getElementById("playerEducation");
+    const playerCareerEl = document.getElementById("playerCareer");
+    const playerIntelligenceEl = document.getElementById("playerIntelligence");
+    const playerSocialEl = document.getElementById("playerSocial");
+    const playerCreativityEl = document.getElementById("playerCreativity");
+    const playerMarriedEl = document.getElementById("playerMarried");
+    const playerChildrenEl = document.getElementById("playerChildren");
+    const gameLog = document.getElementById("game-log");
+    const newGameBtn = document.getElementById("newGameBtn");
+    const nextYearBtn = document.getElementById("nextYearBtn");
+    const canvas = document.getElementById("life-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Resize canvas to container
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      updateCanvas();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // Add message to game log
+    function addLog(message) {
+      const p = document.createElement("p");
+      p.innerHTML = message;
+      gameLog.appendChild(p);
+      gameLog.scrollTop = gameLog.scrollHeight;
+    }
+
+    // Update the status panel
+    function updateStatus() {
+      playerNameEl.textContent = player.name;
+      playerAgeEl.textContent = player.age;
+      playerHealthEl.textContent = Math.max(0, player.health);
+      playerHappinessEl.textContent = player.happiness;
+      playerWealthEl.textContent = player.wealth;
+      playerEducationEl.textContent = player.education;
+      playerCareerEl.textContent = player.career;
+      playerIntelligenceEl.textContent = player.intelligence;
+      playerSocialEl.textContent = player.social;
+      playerCreativityEl.textContent = player.creativity;
+      playerMarriedEl.textContent = player.married ? "Yes" : "No";
+      playerChildrenEl.textContent = player.children;
+    }
+
+    // Draw timeline on canvas with events
+    function updateCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let margin = 40;
+      let lineY = canvas.height - margin;
+      ctx.beginPath();
+      ctx.moveTo(margin, lineY);
+      ctx.lineTo(canvas.width - margin, lineY);
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      let maxAge = Math.max(80, player.age);
+      player.history.forEach(event => {
+        let x = margin + ((canvas.width - 2 * margin) * event.age / maxAge);
+        ctx.beginPath();
+        ctx.arc(x, lineY, 6, 0, Math.PI * 2);
+        let color = "#888";
+        switch(event.type) {
+          case "education": color = "#007bff"; break;
+          case "career": color = "#28a745"; break;
+          case "relationship": color = "#dc3545"; break;
+          case "health": color = "#ffc107"; break;
+          case "travel": color = "#17a2b8"; break;
+          case "family": color = "#fd7e14"; break;
+          case "hobby": color = "#6f42c1"; break;
+          case "random": color = "#20c997"; break;
+        }
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+    }
+
+    // Show decision buttons for interactive choices
+    function showChoiceButtons(options, callback) {
+      const controlPanel = document.getElementById("control-panel");
+      controlPanel.innerHTML = "";
+      options.forEach(option => {
+        const btn = document.createElement("button");
+        btn.textContent = option;
+        btn.addEventListener("click", () => {
+          callback(option);
+          controlPanel.innerHTML = "";
+          controlPanel.appendChild(nextYearBtn);
+        });
+        controlPanel.appendChild(btn);
+      });
+    }
+
+    // Initialize new game with random attributes
+    function startGame() {
+      player.name = prompt("What is your name?") || "Anonymous";
+      player.age = 0;
+      player.health = 100;
+      player.happiness = 50;
+      player.wealth = 0;
+      player.education = "None";
+      player.career = "None";
+      player.intelligence = Math.floor(Math.random() * 10) + 1;
+      player.social = Math.floor(Math.random() * 10) + 1;
+      player.creativity = Math.floor(Math.random() * 10) + 1;
+      player.married = false;
+      player.children = 0;
+      player.history = [];
+      gameOver = false;
+      pendingChoice = null;
+      gameLog.innerHTML = "";
+      addLog(`Welcome, ${player.name}! Your journey begins with unique talents: Intelligence ${player.intelligence}, Social ${player.social}, and Creativity ${player.creativity}.`);
+      updateStatus();
+      updateCanvas();
+      newGameBtn.style.display = "none";
+      nextYearBtn.style.display = "inline-block";
+    }
+
+    // Main simulation function for each year
+    function simulateYear() {
+      if (gameOver || pendingChoice) return;
+      player.age++;
+      addLog(`<strong>Age ${player.age}:</strong> A new chapter unfolds in your life.`);
+      if (player.age < 18) {
+        simulateChildhood();
+      } else {
+        simulateAdultLife();
+      }
+      updateStatus();
+      updateCanvas();
+      checkGameOver();
+    }
+
+    // Childhood events with some randomness and learning
+    function simulateChildhood() {
+      if (player.age <= 6) {
+        addLog("You spend your early years in a loving, nurturing environment, playing and exploring.");
+        player.happiness += 2;
+      } else {
+        let schoolPerformance = Math.random();
+        if (schoolPerformance > 0.4) {
+          addLog("You enjoy school, make friends, and learn new things every day.");
+          player.happiness += 3;
+          if (player.education === "None") {
+            player.education = "Primary School";
+            addLog("You completed your primary education.");
+            player.history.push({ age: player.age, type: "education", note: "Primary School" });
+          }
+        } else {
+          addLog("School is challenging this year, and you struggle with studies.");
+          player.happiness -= 2;
+          player.health -= 1;
+        }
+      }
+    }
+
+    // Adult life events with multiple interactive choices and random events
+    function simulateAdultLife() {
+      // Major decision at 18: future path selection
+      if (player.age === 18 && player.education === "Primary School") {
+        pendingChoice = "postPrimary";
+        addLog("At 18, you face a big decision: pursue higher education, jump straight into work, or take a gap year for travel.");
+        showChoiceButtons(["Go to College", "Start Working", "Gap Year"], (choice) => {
+          if (choice === "Go to College") {
+            player.education = "College";
+            player.wealth -= 15000; // tuition fees
+            addLog("You enroll in college. Your mind expands, but finances get tight.");
+            player.history.push({ age: player.age, type: "education", note: "Enrolled in College" });
+          } else if (choice === "Start Working") {
+            player.career = "Junior Employee";
+            player.wealth += 5000;
+            addLog("You start working immediately. Money flows, yet experience is gained slowly.");
+            player.history.push({ age: player.age, type: "career", note: "Started Working" });
+          } else {
+            addLog("You take a gap year to travel and explore the world. New perspectives shape your future.");
+            player.happiness += 10;
+            player.wealth -= 3000;
+            player.history.push({ age: player.age, type: "travel", note: "Gap Year Adventure" });
+          }
+          pendingChoice = null;
+        });
+        return;
+      }
+
+      // Marriage event around mid-20s if not already married
+      if (player.age === 25 && !player.married) {
+        if (Math.random() < 0.5) {
+          pendingChoice = "marriage";
+          addLog("A promising relationship has blossomed. Do you want to get married?");
+          showChoiceButtons(["Marry", "Stay Single"], (choice) => {
+            if (choice === "Marry") {
+              player.married = true;
+              player.happiness += 15;
+              addLog("You got married! A new partner joins you on this life journey.");
+              player.history.push({ age: player.age, type: "relationship", note: "Married" });
+            } else {
+              addLog("You decide to focus on yourself for now.");
+            }
+            pendingChoice = null;
+          });
+          return;
+        }
+      }
+
+      // Chance for career advancement, business investment, or travel every few years
+      let eventRoll = Math.random();
+      if (eventRoll < 0.2) {
+        // Health event
+        let severity = Math.random();
+        if (severity > 0.7) {
+          addLog("A severe illness strikes you this year.");
+          player.health -= 25;
+          player.happiness -= 15;
+        } else {
+          addLog("A minor health scare forces you to slow down and rest.");
+          player.health -= 7;
+          player.happiness -= 3;
+        }
+        player.history.push({ age: player.age, type: "health", note: "Health Issue" });
+      } else if (eventRoll < 0.4) {
+        // Career or business event
+        if (player.career === "None") {
+          player.career = "Entry Level Job";
+          addLog("You land your first job, stepping into the working world.");
+          player.wealth += 4000;
+          player.history.push({ age: player.age, type: "career", note: "Started First Job" });
+        } else {
+          if (Math.random() > 0.5) {
+            addLog("A promotion or a successful business venture boosts your career!");
+            player.wealth += 6000;
+            player.happiness += 8;
+            player.career = "Senior " + player.career;
+            player.history.push({ age: player.age, type: "career", note: "Promotion/Success" });
+          } else {
+            addLog("Work proves challenging with setbacks and tough decisions.");
+            player.wealth -= 2500;
+            player.happiness -= 5;
+            player.history.push({ age: player.age, type: "career", note: "Work Setback" });
+          }
+        }
+      } else if (eventRoll < 0.6) {
+        // Travel or hobby event
+        pendingChoice = "hobby";
+        addLog("You have an opportunity to explore a new hobby or travel to a new destination. What will you do?");
+        showChoiceButtons(["Explore Hobby", "Plan a Trip", "Skip"], (choice) => {
+          if (choice === "Explore Hobby") {
+            addLog("You dive into a creative hobby, boosting your creativity and happiness.");
+            player.creativity += 2;
+            player.happiness += 5;
+            player.history.push({ age: player.age, type: "hobby", note: "Started a Hobby" });
+          } else if (choice === "Plan a Trip") {
+            addLog("You embark on a journey, discovering new cultures and experiences.");
+            player.happiness += 10;
+            player.wealth -= 2000;
+            player.history.push({ age: player.age, type: "travel", note: "Travel Adventure" });
+          } else {
+            addLog("You decide to play it safe and stick to your routine.");
+          }
+          pendingChoice = null;
+        });
+        return;
+      } else if (eventRoll < 0.8) {
+        // Family or investment event
+        if (player.married && player.age >= 30 && player.children < 3 && Math.random() < 0.5) {
+          pendingChoice = "children";
+          addLog("You and your partner consider expanding your family. Do you want to have a child this year?");
+          showChoiceButtons(["Have Child", "Not Now"], (choice) => {
+            if (choice === "Have Child") {
+              player.children++;
+              player.happiness += 12;
+              player.wealth -= 5000;
+              addLog("A new life enters your family, bringing joy and new challenges.");
+              player.history.push({ age: player.age, type: "family", note: "Had Child" });
+            } else {
+              addLog("You decide to wait before starting a family.");
+            }
+            pendingChoice = null;
+          });
+          return;
+        } else {
+          // House or random investment event
+          addLog("A chance to invest in property or a new business arises.");
+          if (Math.random() > 0.5) {
+            addLog("You invest wisely, increasing your wealth.");
+            player.wealth += 8000;
+            player.history.push({ age: player.age, type: "career", note: "Successful Investment" });
+          } else {
+            addLog("The investment didn’t pay off, causing a financial setback.");
+            player.wealth -= 4000;
+            player.history.push({ age: player.age, type: "random", note: "Investment Loss" });
+          }
+        }
+      } else {
+        // Random luck event
+        if (Math.random() > 0.5) {
+          addLog("Fortune smiles on you with an unexpected bonus or reward.");
+          player.wealth += 10000;
+          player.happiness += 7;
+        } else {
+          addLog("A series of unfortunate events leave you facing losses.");
+          player.wealth -= 6000;
+          player.happiness -= 8;
+        }
+        player.history.push({ age: player.age, type: "random", note: "Luck Event" });
+      }
+
+      // Retirement milestone at age 65
+      if (player.age === 65) {
+        pendingChoice = "retirement";
+        addLog("You've reached 65. Do you retire or continue working?");
+        showChoiceButtons(["Retire", "Keep Working"], (choice) => {
+          if (choice === "Retire") {
+            addLog("You retire and enjoy the fruits of your labor. Relaxation and reflection fill your days.");
+            player.happiness += 20;
+            player.wealth += 5000;
+            player.history.push({ age: player.age, type: "career", note: "Retired" });
+          } else {
+            addLog("You decide to keep working a bit longer, staying active and engaged.");
+            player.happiness -= 5;
+          }
+          pendingChoice = null;
+        });
+        return;
+      }
+    }
+
+    // End game conditions: low health or advanced age
+    function checkGameOver() {
+      if (player.health <= 0 || player.age >= 80) {
+        addLog(`<strong>Game Over.</strong> ${player.name}'s journey ended at age ${player.age}.`);
+        nextYearBtn.style.display = "none";
+        newGameBtn.style.display = "inline-block";
+        gameOver = true;
+      }
+    }
+
+    // Event listeners for controls
+    newGameBtn.addEventListener("click", startGame);
+    nextYearBtn.addEventListener("click", simulateYear);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !pendingChoice && !gameOver) {
+        simulateYear();
+      }
+    });
+  </script>
+</body>
+</html>
