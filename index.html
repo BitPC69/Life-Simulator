@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <title>Ultimate Life Simulator - Simulator</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* For demo purposes, include minimal styling here if needed */
+    body { font-family: Arial, sans-serif; background: #f7f7f7; color: #333; }
+    header, nav { text-align: center; padding: 10px; }
+    nav a { margin: 0 10px; text-decoration: none; color: #007bff; }
+    #simulator { display: flex; }
+    #sim-left { width: 380px; padding: 15px; background: #fff; border-right: 2px solid #ccc; overflow-y: auto; }
+    #game-log { height: 300px; overflow-y: auto; border: 1px solid #ddd; background: #e9ecef; padding: 10px; margin-bottom: 15px; }
+    #sim-right { flex: 1; position: relative; background: #ddd; }
+    #life-canvas { width: 100%; height: 100%; background: #fff; }
+  </style>
 </head>
 <body>
   <!-- Header -->
@@ -20,7 +31,7 @@
   <!-- Main Simulator Content -->
   <main>
     <div id="simulator">
-      <!-- Left Panel: Player Stats, Game Log & Controls -->
+      <!-- Left Panel -->
       <div id="sim-left">
         <h2>Simulator</h2>
         <div id="status-panel">
@@ -52,6 +63,233 @@
     </div>
   </main>
   <!-- JavaScript -->
-  <script src="js/app.js"></script>
-</body>
-</html>
+  <script>
+    // Navigation for this single page (if needed, you can add functions for multi-page navigation)
+    // Global Player Object and Variables
+    var player = {
+      name: "",
+      age: 0,
+      health: 100,
+      happiness: 50,
+      wealth: 1000,
+      education: "None",
+      career: "None",
+      intelligence: 0,
+      creativity: 0,
+      social: 0,
+      married: false,
+      children: 0,
+      history: [] // For timeline events
+    };
+    var pendingDecision = false;
+    
+    // Event Pools (for simplicity, we'll use smaller pools here)
+    var educationEvents = [];
+    var careerEvents = [];
+    var relationshipEvents = [];
+    var healthEvents = [];
+    var travelEvents = [];
+    var randomEvents = [];
+    
+    // Utility: random element selector
+    function chooseRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+    
+    // Initialize events
+    function initEvents() {
+      // Education Events: 20 events (for child and teen years)
+      for (var i = 1; i <= 20; i++) {
+        educationEvents.push({
+          id: "edu" + i,
+          description: "Education Event " + i + ": Do you study hard or take a break?",
+          options: [
+            { text: "Study Hard", effect: function() { player.intelligence += 1; player.happiness -= 1; addLog("Studied hard!"); } },
+            { text: "Take a Break", effect: function() { player.happiness += 2; addLog("Relaxed and recharged."); } }
+          ]
+        });
+      }
+      // Career Events: 20 events
+      for (var i = 1; i <= 20; i++) {
+        careerEvents.push({
+          id: "car" + i,
+          description: "Career Event " + i + ": Risk a big project or play it safe?",
+          options: [
+            { text: "Risk It", effect: function() { player.wealth += 1500; player.happiness += 2; addLog("Bold move paid off!"); } },
+            { text: "Play Safe", effect: function() { player.wealth += 500; addLog("Steady progress."); } }
+          ]
+        });
+      }
+      // Relationship Events: 20 events
+      for (var i = 1; i <= 20; i++) {
+        relationshipEvents.push({
+          id: "rel" + i,
+          description: "Relationship Event " + i + ": Mingle at a party or stick with your close group?",
+          options: [
+            { text: "Mingle", effect: function() { player.social += 1; player.happiness += 3; addLog("Made new friends!"); } },
+            { text: "Stick Close", effect: function() { player.happiness -= 1; addLog("Stayed with familiar faces."); } }
+          ]
+        });
+      }
+      // Health Events: 10 events
+      for (var i = 1; i <= 10; i++) {
+        healthEvents.push({
+          id: "hea" + i,
+          description: "Health Event " + i + ": Rest or push through?",
+          options: [
+            { text: "Rest", effect: function() { player.health += 10; addLog("Rest improved your health."); } },
+            { text: "Push Through", effect: function() { player.health -= 5; addLog("You managed despite feeling ill."); } }
+          ]
+        });
+      }
+      // Travel and Random events as needed...
+      for (var i = 1; i <= 10; i++) {
+        randomEvents.push({
+          id: "ran" + i,
+          description: "Random Event " + i + ": Choose your reaction.",
+          options: [
+            { text: "Option A", effect: function() { player.wealth += 500; addLog("That worked out financially!"); } },
+            { text: "Option B", effect: function() { player.happiness += 2; addLog("It brightened your day!"); } }
+          ]
+        });
+      }
+    }
+    
+    // Helper: Add message to game log
+    function addLog(message) {
+      var log = document.getElementById("game-log");
+      var p = document.createElement("p");
+      p.innerHTML = message;
+      log.appendChild(p);
+      log.scrollTop = log.scrollHeight;
+    }
+    
+    // Update Status Panel
+    function updateStatus() {
+      document.getElementById("playerName").textContent = player.name;
+      document.getElementById("playerAge").textContent = player.age;
+      document.getElementById("playerHealth").textContent = player.health;
+      document.getElementById("playerHappiness").textContent = player.happiness;
+      document.getElementById("playerWealth").textContent = player.wealth;
+      document.getElementById("playerEducation").textContent = player.education;
+      document.getElementById("playerCareer").textContent = player.career;
+      document.getElementById("playerIntelligence").textContent = player.intelligence;
+      document.getElementById("playerCreativity").textContent = player.creativity;
+      document.getElementById("playerSocial").textContent = player.social;
+      document.getElementById("playerMarried").textContent = player.married ? "Yes" : "No";
+      document.getElementById("playerChildren").textContent = player.children;
+    }
+    
+    // Show Decision: Display event options
+    function showDecision(eventObj, callback) {
+      var controlPanel = document.getElementById("sim-control");
+      controlPanel.innerHTML = "";
+      addLog("<strong>" + eventObj.description + "</strong>");
+      eventObj.options.forEach(function(option) {
+        var btn = document.createElement("button");
+        btn.textContent = option.text;
+        btn.addEventListener("click", function() {
+          option.effect();
+          callback();
+          controlPanel.innerHTML = "";
+          controlPanel.appendChild(document.getElementById("nextYearBtn"));
+          updateStatus();
+        });
+        controlPanel.appendChild(btn);
+      });
+    }
+    
+    // Simulation Engine: Progress one year
+    function simulateYear() {
+      if (pendingDecision) return;
+      player.age++;
+      
+      // If baby (under 3), no decisions – just log baby stage events.
+      if (player.age < 3) {
+        addLog("<hr><strong>Year " + player.age + ":</strong> You are a baby, spending your time sleeping and learning through observation.");
+        // Optional: Increase health slightly or do nothing.
+        updateStatus();
+        drawTimeline();
+        return;
+      }
+      
+      addLog("<hr><strong>Year " + player.age + ":</strong> A new chapter begins.");
+      player.history.push({ year: player.age, note: "Year " + player.age });
+      
+      // Milestone decisions for older ages
+      if (player.age === 18) {
+        var decision18 = {
+          description: "At 18, choose your path: College, Work, or a Gap Year.",
+          options: [
+            { text: "College", effect: function() { player.education = "College"; player.wealth -= 10000; player.intelligence += 2; addLog("You enrolled in college."); } },
+            { text: "Work", effect: function() { player.career = "Junior Employee"; player.wealth += 5000; player.social += 1; addLog("You started working."); } },
+            { text: "Gap Year", effect: function() { player.education = "Self-Taught"; player.wealth -= 5000; player.happiness += 10; addLog("You took a gap year."); } }
+          ]
+        };
+        pendingDecision = true;
+        showDecision(decision18, function() { pendingDecision = false; });
+        return;
+      }
+      if (player.age === 25 && !player.married) {
+        var decision25 = {
+          description: "At 25, romance blooms. Do you get married?",
+          options: [
+            { text: "Marry", effect: function() { player.married = true; player.happiness += 20; addLog("You got married!"); } },
+            { text: "Stay Single", effect: function() { player.happiness += 5; addLog("You remained single."); } }
+          ]
+        };
+        pendingDecision = true;
+        showDecision(decision25, function() { pendingDecision = false; });
+        return;
+      }
+      if (player.age === 30 && player.married && player.children < 3) {
+        var decision30 = {
+          description: "At 30, consider starting a family. Have a child?",
+          options: [
+            { text: "Have Child", effect: function() { player.children++; player.happiness += 15; player.wealth -= 5000; addLog("A child joins your family."); } },
+            { text: "Wait", effect: function() { player.happiness += 2; addLog("You decide to wait."); } }
+          ]
+        };
+        pendingDecision = true;
+        showDecision(decision30, function() { pendingDecision = false; });
+        return;
+      }
+      if (player.age === 65) {
+        var decision65 = {
+          description: "At 65, retirement beckons. Retire or continue working?",
+          options: [
+            { text: "Retire", effect: function() { player.happiness += 20; player.wealth += 5000; addLog("You retired."); } },
+            { text: "Work On", effect: function() { player.happiness -= 5; addLog("You chose to work on."); } }
+          ]
+        };
+        pendingDecision = true;
+        showDecision(decision65, function() { pendingDecision = false; });
+        return;
+      }
+      
+      // Select event pool based on age
+      var eventPool = [];
+      if (player.age < 18) {
+        eventPool = educationEvents;
+      } else if (player.age < 25) {
+        eventPool = educationEvents.concat(randomEvents);
+      } else if (player.age < 35) {
+        eventPool = careerEvents.concat(relationshipEvents, randomEvents);
+      } else if (player.age < 50) {
+        eventPool = careerEvents.concat(healthEvents, travelEvents, randomEvents);
+      } else if (player.age < 65) {
+        eventPool = healthEvents.concat(relationshipEvents, randomEvents);
+      } else {
+        eventPool = randomEvents;
+      }
+      
+      var eventObj = chooseRandom(eventPool);
+      pendingDecision = true;
+      showDecision(eventObj, function() { pendingDecision = false; });
+      updateStatus();
+      drawTimeline();
+    }
+    
+    // Canvas Timeline: Draw dots representing each year
+    var canvas = document.getElementById("life-canvas");
+    var ctx = canvas.getContext("2d
