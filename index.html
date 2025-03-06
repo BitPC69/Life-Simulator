@@ -5,123 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Life Simulator</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        #status, #log, #decisions { margin-bottom: 20px; }
-        #decisions button { margin-right: 10px; }
-        .hidden { display: none; }
+        #life-simulator {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            border: 1px solid #ccc;
+            padding: 20px;
+            max-width: 600px;
+        }
+        #life-simulator h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        #life-simulator #status, #log, #decisions {
+            margin-bottom: 20px;
+        }
+        #life-simulator #decisions button {
+            margin-right: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .attribute-bar {
+            height: 20px;
+            background-color: lightgray;
+            margin: 5px 0;
+            position: relative;
+        }
+        .attribute-fill {
+            height: 100%;
+            background-color: green;
+            width: 0;
+            position: absolute;
+        }
     </style>
 </head>
 <body>
-    <h1>Life Simulator</h1>
-    <div id="status"></div>
-    <div id="log"></div>
-    <div id="decisions" class="hidden"></div>
-    <button id="nextYearBtn">Next Year</button>
+    <div id="life-simulator">
+        <h1>Life Simulator</h1>
+        <div id="status"></div>
+        <div id="log"></div>
+        <div id="decisions" class="hidden"></div>
+        <button id="nextYearBtn">Next Year</button>
+    </div>
 
     <script>
-        const player = {
-            age: 0,
-            health: 100,
-            happiness: 50,
-            intelligence: 50,
-            wealth: 0,
-            married: false,
-            children: 0,
-            log: []
-        };
+        (function() {
+            const player = {
+                age: 0,
+                health: 100,
+                happiness: 50,
+                intelligence: 50,
+                wealth: 0,
+                married: false,
+                children: 0,
+                log: []
+            };
 
-        const decisions = {
-            5: {
-                text: "Start School",
-                options: [
-                    { text: "Attend Public School", effect: () => { player.intelligence += 5; } },
-                    { text: "Attend Private School", effect: () => { player.intelligence += 10; player.wealth -= 1000; } }
-                ]
-            },
-            18: {
-                text: "Post-High School Path",
-                options: [
-                    { text: "Attend College", effect: () => { player.intelligence += 15; player.wealth -= 20000; } },
-                    { text: "Start Working", effect: () => { player.wealth += 10000; } },
-                    { text: "Travel the World", effect: () => { player.happiness += 20; player.wealth -= 15000; } }
-                ]
-            },
-            25: {
-                text: "Career Advancement",
-                options: [
-                    { text: "Pursue Promotion", effect: () => { player.wealth += 20000; player.happiness -= 10; } },
-                    { text: "Maintain Current Position", effect: () => { player.happiness += 5; } },
-                    { text: "Switch Careers", effect: () => { player.intelligence += 10; player.wealth -= 5000; } }
-                ]
-            },
-            30: {
-                text: "Family Life",
-                options: [
-                    { text: "Get Married", effect: () => { player.married = true; player.happiness += 20; } },
-                    { text: "Stay Single", effect: () => { player.happiness += 10; } }
-                ]
-            },
-            35: {
-                text: "Children",
-                options: [
-                    { text: "Have a Child", effect: () => { player.children += 1; player.happiness += 15; player.wealth -= 10000; } },
-                    { text: "No Children", effect: () => { player.happiness += 5; } }
-                ]
-            },
-            50: {
-                text: "Midlife Crisis",
-                options: [
-                    { text: "Buy a Sports Car", effect: () => { player.happiness += 10; player.wealth -= 20000; } },
-                    { text: "Start a New Hobby", effect: () => { player.intelligence += 5; player.happiness += 15; } }
-                ]
-            },
-            65: {
-                text: "Retirement",
-                options: [
-                    { text: "Retire", effect: () => { player.happiness += 20; } },
-                    { text: "Keep Working", effect: () => { player.wealth += 30000; player.happiness -= 10; } }
-                ]
-            }
-        };
+            const decisions = {
+                5: {
+                    text: "Start School",
+                    options: [
+                        { text: "Attend Public School", effect: () => { player.intelligence += 5; } },
+                        { text: "Attend Private School", effect: () => { player.intelligence += 10; player.wealth -= 1000; } }
+                    ]
+                },
+                18: {
+                    text: "Post-High School Path",
+                    options: [
+                        { text: "Attend College", effect: () => { player.intelligence += 15; player.wealth -= 20000; } },
+                        { text: "Start Working", effect: () => { player.wealth += 10000; } },
+                        { text: "Travel the World", effect: () => { player.happiness += 20; player.wealth -= 15000; } }
+                    ]
+                },
+                25: {
+                    text: "Career Advancement",
+                    options: [
+                        { text: "Pursue Promotion", effect: () => { player.wealth += 20000; player.happiness -= 10; } },
+                        { text: "Maintain Current Position", effect: () => { player.happiness += 5; } },
+                        { text: "Switch Careers", effect: () => { player.intelligence += 10; player.wealth -= 5000; } }
+                    ]
+                },
+                30: {
+                    text: "Family Life",
+                    options: [
+                        { text: "Get Married", effect: () => { player.married = true; player.happiness += 20; } },
+                        { text: "Stay Single", effect: () => { player.happiness += 10; } }
+                    ]
+                },
+                35: {
+                    text: "Children",
+                    options: [
+                        { text: "Have a Child", effect: () => { player.children += 1; player.happiness += 15; player.wealth -= 10000; } },
+                        { text: "No Children", effect: () => { player.happiness += 5; } }
+                    ]
+                },
+                50: {
+                    text: "Midlife Crisis",
+                    options: [
+                        { text: "Buy a Sports Car", effect: () => { player.happiness += 10; player.wealth -= 20000; } },
+                        { text: "Start a New Hobby", effect: () => { player.intelligence += 5; player.happiness += 15; } }
+                    ]
+                },
+                65: {
+                    text: "Retirement",
+                    options: [
+                        { text: "Retire", effect: () => { player.happiness += 20; } },
+                        { text: "Keep Working", effect: () => { player.wealth += 30000; player.happiness -= 10; } }
+                    ]
+                }
+            };
 
-        const randomEvents = [
-            { text: "You found a $100 bill on the ground.", effect: () => { player.wealth += 100; } },
-            { text: "You got a surprise bonus at work.", effect: () => { player.wealth += 500; player.happiness += 5; } },
-            { text: "You caught a cold.", effect: () => { player.health -= 10; } },
-            { text: "You helped a stranger and felt good about it.", effect: () => { player.happiness += 10; } },
-            { text: "You learned a new skill.", effect: () => { player.intelligence += 5; } }
-        ];
-
-        function updateStatus() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = `
-                <h2>Status at Age ${player.age}</h2>
-                <p>Health: ${player.health}</p>
-                <p>Happiness: ${player.happiness}</p>
-                <p>Intelligence: ${player.intelligence}</p>
-                <p>Wealth: $${player.wealth}</p>
-                <p>Married: ${player.married ? 'Yes' : 'No'}</p>
-                <p>Children: ${player.children}</p>
-            `;
-        }
-
-        function addLog(entry) {
-            player.log.push(entry);
-            const logDiv = document.getElementById('log');
-            logDiv.innerHTML = `<h2>Life Events</h2><ul>${player.log.map(e => `<li>${e}</li>`).join('')}</ul>`;
-        }
-
-        function showDecisions(decision) {
-            const decisionsDiv = document.getElementById('decisions');
-            decisionsDiv.innerHTML = `<h2>${decision.text}</h2>`;
-            decision.options.forEach(option => {
-                const button = document.createElement('button');
-                button.textContent = option.text;
-                button.onclick = () => {
-                    option.effect();
-                    addLog(`At age ${player.age}, you chose to ${option.text.toLowerCase()}.`);
-                    decisionsDiv.classList.add('hidden');
-                    document.getElementById
-::contentReference[oaicite:0]{index=0}
- 
- 
+            const randomEvents = [
+                { text: "You found a $100 bill on the ground.", effect: () => { player.wealth += 100; } },
+                { text: "You got a surprise bonus at work.", effect: () => { player.wealth += 500; player.happiness += 5; } },
+                { text: "You caught a cold.", effect: () => { player.health -= 10; } },
+                { text: "You helped a stranger and felt good about it
