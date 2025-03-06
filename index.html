@@ -1,295 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Ultimate Life Simulator - Simulator</title>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    /* For demo purposes, include minimal styling here if needed */
-    body { font-family: Arial, sans-serif; background: #f7f7f7; color: #333; }
-    header, nav { text-align: center; padding: 10px; }
-    nav a { margin: 0 10px; text-decoration: none; color: #007bff; }
-    #simulator { display: flex; }
-    #sim-left { width: 380px; padding: 15px; background: #fff; border-right: 2px solid #ccc; overflow-y: auto; }
-    #game-log { height: 300px; overflow-y: auto; border: 1px solid #ddd; background: #e9ecef; padding: 10px; margin-bottom: 15px; }
-    #sim-right { flex: 1; position: relative; background: #ddd; }
-    #life-canvas { width: 100%; height: 100%; background: #fff; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #status, #log, #decisions { margin-bottom: 20px; }
+        #decisions button { margin-right: 10px; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
-  <!-- Header -->
-  <header>
-    <h1>Ultimate Life Simulator - Simulator</h1>
-  </header>
-  <!-- Navigation -->
-  <nav>
-    <a href="index.html">Simulator</a>
-    <a href="gallery.html">Gallery</a>
-    <a href="profile.html">Profile</a>
-    <a href="settings.html">Settings</a>
-  </nav>
-  <!-- Main Simulator Content -->
-  <main>
-    <div id="simulator">
-      <!-- Left Panel -->
-      <div id="sim-left">
-        <h2>Simulator</h2>
-        <div id="status-panel">
-          <p><strong>Name:</strong> <span id="playerName">-</span></p>
-          <p><strong>Age:</strong> <span id="playerAge">0</span></p>
-          <p><strong>Health:</strong> <span id="playerHealth">100</span></p>
-          <p><strong>Happiness:</strong> <span id="playerHappiness">50</span></p>
-          <p><strong>Wealth:</strong> $<span id="playerWealth">1000</span></p>
-          <p><strong>Education:</strong> <span id="playerEducation">None</span></p>
-          <p><strong>Career:</strong> <span id="playerCareer">None</span></p>
-          <p><strong>Intelligence:</strong> <span id="playerIntelligence">0</span></p>
-          <p><strong>Creativity:</strong> <span id="playerCreativity">0</span></p>
-          <p><strong>Social:</strong> <span id="playerSocial">0</span></p>
-          <p><strong>Married:</strong> <span id="playerMarried">No</span></p>
-          <p><strong>Children:</strong> <span id="playerChildren">0</span></p>
-        </div>
-        <div id="game-log">
-          <p>Welcome to your life! Click "New Game" to begin your journey.</p>
-        </div>
-        <div id="sim-control">
-          <button id="newGameBtn">New Game</button>
-          <button id="nextYearBtn" style="display:none;">Next Year</button>
-        </div>
-      </div>
-      <!-- Right Panel: Canvas Timeline -->
-      <div id="sim-right">
-        <canvas id="life-canvas"></canvas>
-      </div>
-    </div>
-  </main>
-  <!-- JavaScript -->
-  <script>
-    // Navigation for this single page (if needed, you can add functions for multi-page navigation)
-    // Global Player Object and Variables
-    var player = {
-      name: "",
-      age: 0,
-      health: 100,
-      happiness: 50,
-      wealth: 1000,
-      education: "None",
-      career: "None",
-      intelligence: 0,
-      creativity: 0,
-      social: 0,
-      married: false,
-      children: 0,
-      history: [] // For timeline events
-    };
-    var pendingDecision = false;
-    
-    // Event Pools (for simplicity, we'll use smaller pools here)
-    var educationEvents = [];
-    var careerEvents = [];
-    var relationshipEvents = [];
-    var healthEvents = [];
-    var travelEvents = [];
-    var randomEvents = [];
-    
-    // Utility: random element selector
-    function chooseRandom(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-    
-    // Initialize events
-    function initEvents() {
-      // Education Events: 20 events (for child and teen years)
-      for (var i = 1; i <= 20; i++) {
-        educationEvents.push({
-          id: "edu" + i,
-          description: "Education Event " + i + ": Do you study hard or take a break?",
-          options: [
-            { text: "Study Hard", effect: function() { player.intelligence += 1; player.happiness -= 1; addLog("Studied hard!"); } },
-            { text: "Take a Break", effect: function() { player.happiness += 2; addLog("Relaxed and recharged."); } }
-          ]
-        });
-      }
-      // Career Events: 20 events
-      for (var i = 1; i <= 20; i++) {
-        careerEvents.push({
-          id: "car" + i,
-          description: "Career Event " + i + ": Risk a big project or play it safe?",
-          options: [
-            { text: "Risk It", effect: function() { player.wealth += 1500; player.happiness += 2; addLog("Bold move paid off!"); } },
-            { text: "Play Safe", effect: function() { player.wealth += 500; addLog("Steady progress."); } }
-          ]
-        });
-      }
-      // Relationship Events: 20 events
-      for (var i = 1; i <= 20; i++) {
-        relationshipEvents.push({
-          id: "rel" + i,
-          description: "Relationship Event " + i + ": Mingle at a party or stick with your close group?",
-          options: [
-            { text: "Mingle", effect: function() { player.social += 1; player.happiness += 3; addLog("Made new friends!"); } },
-            { text: "Stick Close", effect: function() { player.happiness -= 1; addLog("Stayed with familiar faces."); } }
-          ]
-        });
-      }
-      // Health Events: 10 events
-      for (var i = 1; i <= 10; i++) {
-        healthEvents.push({
-          id: "hea" + i,
-          description: "Health Event " + i + ": Rest or push through?",
-          options: [
-            { text: "Rest", effect: function() { player.health += 10; addLog("Rest improved your health."); } },
-            { text: "Push Through", effect: function() { player.health -= 5; addLog("You managed despite feeling ill."); } }
-          ]
-        });
-      }
-      // Travel and Random events as needed...
-      for (var i = 1; i <= 10; i++) {
-        randomEvents.push({
-          id: "ran" + i,
-          description: "Random Event " + i + ": Choose your reaction.",
-          options: [
-            { text: "Option A", effect: function() { player.wealth += 500; addLog("That worked out financially!"); } },
-            { text: "Option B", effect: function() { player.happiness += 2; addLog("It brightened your day!"); } }
-          ]
-        });
-      }
-    }
-    
-    // Helper: Add message to game log
-    function addLog(message) {
-      var log = document.getElementById("game-log");
-      var p = document.createElement("p");
-      p.innerHTML = message;
-      log.appendChild(p);
-      log.scrollTop = log.scrollHeight;
-    }
-    
-    // Update Status Panel
-    function updateStatus() {
-      document.getElementById("playerName").textContent = player.name;
-      document.getElementById("playerAge").textContent = player.age;
-      document.getElementById("playerHealth").textContent = player.health;
-      document.getElementById("playerHappiness").textContent = player.happiness;
-      document.getElementById("playerWealth").textContent = player.wealth;
-      document.getElementById("playerEducation").textContent = player.education;
-      document.getElementById("playerCareer").textContent = player.career;
-      document.getElementById("playerIntelligence").textContent = player.intelligence;
-      document.getElementById("playerCreativity").textContent = player.creativity;
-      document.getElementById("playerSocial").textContent = player.social;
-      document.getElementById("playerMarried").textContent = player.married ? "Yes" : "No";
-      document.getElementById("playerChildren").textContent = player.children;
-    }
-    
-    // Show Decision: Display event options
-    function showDecision(eventObj, callback) {
-      var controlPanel = document.getElementById("sim-control");
-      controlPanel.innerHTML = "";
-      addLog("<strong>" + eventObj.description + "</strong>");
-      eventObj.options.forEach(function(option) {
-        var btn = document.createElement("button");
-        btn.textContent = option.text;
-        btn.addEventListener("click", function() {
-          option.effect();
-          callback();
-          controlPanel.innerHTML = "";
-          controlPanel.appendChild(document.getElementById("nextYearBtn"));
-          updateStatus();
-        });
-        controlPanel.appendChild(btn);
-      });
-    }
-    
-    // Simulation Engine: Progress one year
-    function simulateYear() {
-      if (pendingDecision) return;
-      player.age++;
-      
-      // If baby (under 3), no decisions – just log baby stage events.
-      if (player.age < 3) {
-        addLog("<hr><strong>Year " + player.age + ":</strong> You are a baby, spending your time sleeping and learning through observation.");
-        // Optional: Increase health slightly or do nothing.
-        updateStatus();
-        drawTimeline();
-        return;
-      }
-      
-      addLog("<hr><strong>Year " + player.age + ":</strong> A new chapter begins.");
-      player.history.push({ year: player.age, note: "Year " + player.age });
-      
-      // Milestone decisions for older ages
-      if (player.age === 18) {
-        var decision18 = {
-          description: "At 18, choose your path: College, Work, or a Gap Year.",
-          options: [
-            { text: "College", effect: function() { player.education = "College"; player.wealth -= 10000; player.intelligence += 2; addLog("You enrolled in college."); } },
-            { text: "Work", effect: function() { player.career = "Junior Employee"; player.wealth += 5000; player.social += 1; addLog("You started working."); } },
-            { text: "Gap Year", effect: function() { player.education = "Self-Taught"; player.wealth -= 5000; player.happiness += 10; addLog("You took a gap year."); } }
-          ]
+    <h1>Life Simulator</h1>
+    <div id="status"></div>
+    <div id="log"></div>
+    <div id="decisions" class="hidden"></div>
+    <button id="nextYearBtn">Next Year</button>
+
+    <script>
+        const player = {
+            age: 0,
+            health: 100,
+            happiness: 50,
+            intelligence: 50,
+            wealth: 0,
+            married: false,
+            children: 0,
+            log: []
         };
-        pendingDecision = true;
-        showDecision(decision18, function() { pendingDecision = false; });
-        return;
-      }
-      if (player.age === 25 && !player.married) {
-        var decision25 = {
-          description: "At 25, romance blooms. Do you get married?",
-          options: [
-            { text: "Marry", effect: function() { player.married = true; player.happiness += 20; addLog("You got married!"); } },
-            { text: "Stay Single", effect: function() { player.happiness += 5; addLog("You remained single."); } }
-          ]
+
+        const decisions = {
+            5: {
+                text: "Start School",
+                options: [
+                    { text: "Attend Public School", effect: () => { player.intelligence += 5; } },
+                    { text: "Attend Private School", effect: () => { player.intelligence += 10; player.wealth -= 1000; } }
+                ]
+            },
+            18: {
+                text: "Post-High School Path",
+                options: [
+                    { text: "Attend College", effect: () => { player.intelligence += 15; player.wealth -= 20000; } },
+                    { text: "Start Working", effect: () => { player.wealth += 10000; } },
+                    { text: "Travel the World", effect: () => { player.happiness += 20; player.wealth -= 15000; } }
+                ]
+            },
+            25: {
+                text: "Career Advancement",
+                options: [
+                    { text: "Pursue Promotion", effect: () => { player.wealth += 20000; player.happiness -= 10; } },
+                    { text: "Maintain Current Position", effect: () => { player.happiness += 5; } },
+                    { text: "Switch Careers", effect: () => { player.intelligence += 10; player.wealth -= 5000; } }
+                ]
+            },
+            30: {
+                text: "Family Life",
+                options: [
+                    { text: "Get Married", effect: () => { player.married = true; player.happiness += 20; } },
+                    { text: "Stay Single", effect: () => { player.happiness += 10; } }
+                ]
+            },
+            35: {
+                text: "Children",
+                options: [
+                    { text: "Have a Child", effect: () => { player.children += 1; player.happiness += 15; player.wealth -= 10000; } },
+                    { text: "No Children", effect: () => { player.happiness += 5; } }
+                ]
+            },
+            50: {
+                text: "Midlife Crisis",
+                options: [
+                    { text: "Buy a Sports Car", effect: () => { player.happiness += 10; player.wealth -= 20000; } },
+                    { text: "Start a New Hobby", effect: () => { player.intelligence += 5; player.happiness += 15; } }
+                ]
+            },
+            65: {
+                text: "Retirement",
+                options: [
+                    { text: "Retire", effect: () => { player.happiness += 20; } },
+                    { text: "Keep Working", effect: () => { player.wealth += 30000; player.happiness -= 10; } }
+                ]
+            }
         };
-        pendingDecision = true;
-        showDecision(decision25, function() { pendingDecision = false; });
-        return;
-      }
-      if (player.age === 30 && player.married && player.children < 3) {
-        var decision30 = {
-          description: "At 30, consider starting a family. Have a child?",
-          options: [
-            { text: "Have Child", effect: function() { player.children++; player.happiness += 15; player.wealth -= 5000; addLog("A child joins your family."); } },
-            { text: "Wait", effect: function() { player.happiness += 2; addLog("You decide to wait."); } }
-          ]
-        };
-        pendingDecision = true;
-        showDecision(decision30, function() { pendingDecision = false; });
-        return;
-      }
-      if (player.age === 65) {
-        var decision65 = {
-          description: "At 65, retirement beckons. Retire or continue working?",
-          options: [
-            { text: "Retire", effect: function() { player.happiness += 20; player.wealth += 5000; addLog("You retired."); } },
-            { text: "Work On", effect: function() { player.happiness -= 5; addLog("You chose to work on."); } }
-          ]
-        };
-        pendingDecision = true;
-        showDecision(decision65, function() { pendingDecision = false; });
-        return;
-      }
-      
-      // Select event pool based on age
-      var eventPool = [];
-      if (player.age < 18) {
-        eventPool = educationEvents;
-      } else if (player.age < 25) {
-        eventPool = educationEvents.concat(randomEvents);
-      } else if (player.age < 35) {
-        eventPool = careerEvents.concat(relationshipEvents, randomEvents);
-      } else if (player.age < 50) {
-        eventPool = careerEvents.concat(healthEvents, travelEvents, randomEvents);
-      } else if (player.age < 65) {
-        eventPool = healthEvents.concat(relationshipEvents, randomEvents);
-      } else {
-        eventPool = randomEvents;
-      }
-      
-      var eventObj = chooseRandom(eventPool);
-      pendingDecision = true;
-      showDecision(eventObj, function() { pendingDecision = false; });
-      updateStatus();
-      drawTimeline();
-    }
-    
-    // Canvas Timeline: Draw dots representing each year
-    var canvas = document.getElementById("life-canvas");
-    var ctx = canvas.getContext("2d
+
+        const randomEvents = [
+            { text: "You found a $100 bill on the ground.", effect: () => { player.wealth += 100; } },
+            { text: "You got a surprise bonus at work.", effect: () => { player.wealth += 500; player.happiness += 5; } },
+            { text: "You caught a cold.", effect: () => { player.health -= 10; } },
+            { text: "You helped a stranger and felt good about it.", effect: () => { player.happiness += 10; } },
+            { text: "You learned a new skill.", effect: () => { player.intelligence += 5; } }
+        ];
+
+        function updateStatus() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `
+                <h2>Status at Age ${player.age}</h2>
+                <p>Health: ${player.health}</p>
+                <p>Happiness: ${player.happiness}</p>
+                <p>Intelligence: ${player.intelligence}</p>
+                <p>Wealth: $${player.wealth}</p>
+                <p>Married: ${player.married ? 'Yes' : 'No'}</p>
+                <p>Children: ${player.children}</p>
+            `;
+        }
+
+        function addLog(entry) {
+            player.log.push(entry);
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = `<h2>Life Events</h2><ul>${player.log.map(e => `<li>${e}</li>`).join('')}</ul>`;
+        }
+
+        function showDecisions(decision) {
+            const decisionsDiv = document.getElementById('decisions');
+            decisionsDiv.innerHTML = `<h2>${decision.text}</h2>`;
+            decision.options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.onclick = () => {
+                    option.effect();
+                    addLog(`At age ${player.age}, you chose to ${option.text.toLowerCase()}.`);
+                    decisionsDiv.classList.add('hidden');
+                    document.getElementById
+::contentReference[oaicite:0]{index=0}
+ 
